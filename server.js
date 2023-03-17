@@ -1,9 +1,13 @@
 const express = require('express');
+const app = express();
+const http = require('http');
+const { Server } = require('socket.io');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { WebcastPushConnection } = require('tiktok-live-connector');
 
-const app = express();
+
+
 
 app.use(cors());
 app.options('*', cors());
@@ -17,29 +21,39 @@ app.use(allowCrossDomain);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+var username;
+var connected = false;
+const server = http.createServer(app)
+const wss = new Server(server, {
+  cors: {
+    methods: ["GET", "POST"],
+    allowedHeaders: ["chat-traffic"],
+  }
+});
 const PORT = 3000;
+wss.on('connection', (socket) => {
 
-app.listen(PORT, () => {
-  console.log(`Tiktok Monitor is listening at http://localhost:${PORT}`)
+    socket.on('tryConnection', name => {
+      chatStream(name)
+    })
+
 })
 
-var username;
-
-function connectToLive(req, res, next) {
-  const headers = {
-    'Content-Type': 'text/event-stream',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'no-cache'
-  };
-  if (req.method == "POST") {
-
-    username = req.body.name
-
-  }
-
+function getRoleColor(roleInfo) {
+  switch(roleInfo) {
+    case (roleInfo[0] == 1):
+      return "#D3D3D3";
+    case (roleInfo[1] == true):
+      return "#03FFC4";
+    case (roleInfo[2] == true):
+      return "#FF4629";
+    default:
+      return "FFFFFF";
+    }
 }
-function chatStream(req, res) {
 
+function chatStream(uName) {
+  let username = uName || null;
 
   if (username != null || username != '') {
     let tiktokLiveConnection = new WebcastPushConnection(username, {
@@ -48,24 +62,27 @@ function chatStream(req, res) {
     });
 
     tiktokLiveConnection.connect().then(state => {
-      console.info(`Connected to room (ID): ${state.roomId}`)}).catch(err => {
+      console.info(`Connected to room (ID): ${state.roomId}`)
+      wss.emit('connectionSuccessful')
+    }).catch(err => {
       console.error('Failed to connect', err)
+      wss.emit('connectionUnsuccessful')
     })
 
     tiktokLiveConnection.on('chat', data => {
       let out = {
-        nickname: data.nickname,
+        nickname: data.uniqueId,
         msgContent: data.comment,
-        profilePictureUrl: data.profilePictureUrl
+        profilePictureUrl: data.profilePictureUrl,
+        color: getRoleColor([data.rollowRole,  data.isModerator, data.isSubscriber])
       }
-      res.write({
-        event: "incomingChat",
-        data: JSON.stringify(out)
-      })
-      console.log(out)
+      wss.emit('chatMessage', JSON.stringify(out));
     })
   }
 
 }
-app.post('/connect', connectToLive);
-app.get('/chatStream', chatStream)
+
+
+server.listen(PORT, () => {
+  console.log(`Tiktok Monitor is listening at http://localhost:${PORT}`)
+})
