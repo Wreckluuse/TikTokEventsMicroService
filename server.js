@@ -33,23 +33,29 @@ const wss = new Server(server, {
 const PORT = 3000;
 wss.on('connection', (socket) => {
 
-    socket.on('tryConnection', name => {
-      chatStream(name)
-    })
+  socket.on('tryConnection', name => {
+    chatStream(name)
+  })
 
 })
 
+async function isHighlighted(msg, broadcaster) {
+  let output = false;
+  let broadcasterComparator = "@" + broadcaster;
+  let wordArr = msg.split(" ");
+  for (word in wordArr) {
+    if (word == broadcasterComparator) output = true;
+  }
+  return output;
+}
+
 function getRoleColor(roleInfo) {
-  switch(roleInfo) {
-    case (roleInfo[0] == 1):
-      return "#D3D3D3";
-    case (roleInfo[1] == true):
-      return "#03FFC4";
-    case (roleInfo[2] == true):
-      return "#FF4629";
-    default:
-      return "FFFFFF";
-    }
+
+  if (roleInfo[0]) return "FF4629";
+  else if (roleInfo[1]) return "03FFC4";
+  else if (roleInfo[2] == 1) return "D3D3D3";
+  else return "#ed909b"
+
 }
 
 function chatStream(uName) {
@@ -61,6 +67,44 @@ function chatStream(uName) {
       fetchRoomInfoOnConnect: true
     });
 
+function evtManager(data, type) {
+  let out = {};
+  switch (type) {
+    case 'gift':
+      out = {
+        type: 'gift',
+        nickname: data.uniqueId,
+        giftType: data.giftName,
+        giftCount: data.repeatCount,
+        icon: data.giftPictureUrl,
+        timeStamp: new Date().getTime()
+      }
+      break;
+    case 'subscribe':
+      out = {
+        type: 'subscribe',
+        nickname: data.uniqueId,
+        months: data.subMonth,
+        timeStamp: new Date().getTime()
+      }
+      break;
+    case 'follow':
+      out = {
+        type: 'follow',
+        nickname: data.uniqueId,
+        timeStamp: new Date().getTime()
+      }
+      break;
+    case 'share':
+      out = {
+        type: 'share',
+        nickname: data.uniqueId,
+        timeStamp: new Date().getTime()
+      }
+  }
+  return out;
+}
+
     tiktokLiveConnection.connect().then(state => {
       console.info(`Connected to room (ID): ${state.roomId}`)
       wss.emit('connectionSuccessful')
@@ -69,14 +113,39 @@ function chatStream(uName) {
       wss.emit('connectionUnsuccessful')
     })
 
-    tiktokLiveConnection.on('chat', data => {
+    tiktokLiveConnection.on('chat', async data => {
+      let msgColor = getRoleColor([data.isModerator, data.isSubscriber, data.rollowRole]);
+      let highlight = await (isHighlighted(data.comment, data.uniqueId));
       let out = {
         nickname: data.uniqueId,
         msgContent: data.comment,
         profilePictureUrl: data.profilePictureUrl,
-        color: getRoleColor([data.rollowRole,  data.isModerator, data.isSubscriber])
+        color: msgColor,
+        highlightMsg: highlight
       }
+
       wss.emit('chatMessage', JSON.stringify(out));
+
+    })
+
+    tiktokLiveConnection.on('gift', async data => {
+      let out = evtManager(data, 'gift');
+      wss.emit('evtMessage', JSON.stringify(out));
+    })
+
+    tiktokLiveConnection.on('subscribe', async data => {
+      let out = evtManager(data, 'subscribe');
+      wss.emit('evtMessage', JSON.stringify(out));
+    })
+
+    tiktokLiveConnection.on('follow', async data => {
+      let out = evtManager(data, 'follow');
+      wss.emit('evtMessage', JSON.stringify(out));
+    })
+
+    tiktokLiveConnection.on('share', async data => {
+      let out = evtManager(data, 'share');
+      wss.emit('evtMessage', JSON.stringify(data));
     })
   }
 
