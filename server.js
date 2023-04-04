@@ -76,6 +76,7 @@ function evtManager(data, type) {
         nickname: data.uniqueId,
         giftType: data.giftName,
         giftCount: data.repeatCount,
+        priceValue: data.diamondCount,
         icon: data.giftPictureUrl,
         timeStamp: new Date().getTime()
       }
