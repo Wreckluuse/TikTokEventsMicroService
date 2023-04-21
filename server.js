@@ -55,10 +55,10 @@ async function isHighlighted(msg, broadcaster) {
 
 function getRoleColor(roleInfo) {
 
-  if (roleInfo[0]) return "#ff4629";
-  else if (roleInfo[1]) return "#03ffc4";
-  else if (roleInfo[2] == 1) return "#d3d3d3";
-  else return "#ed909b"
+  if (roleInfo[0]) return "#ff00bb";
+  else if (roleInfo[1]) return "#9aff67";
+  else if (roleInfo[2] == 1) return "#f2b171";
+  else return "#d3d3d3"
 
 }
 
@@ -74,6 +74,7 @@ function chatStream(uName) {
     function evtManager(data, type) {
       let out = {};
       let currentDate = new Date();
+      let msgColor = getRoleColor([data.isModerator, data.isSubscriber, data.rollowRole]);
 
       switch (type) {
         case 'gift':
@@ -95,6 +96,10 @@ function chatStream(uName) {
               priceValue: price,
               icon: data.giftPictureUrl,
               timeStamp: currentDate.toLocaleTimeString(),
+              profilePictureUrl: data.profilePictureUrl,
+              followCount: data.followInfo.followerCount,
+              color: msgColor,
+              badges: data.userBadges
             }
           }
           break;
@@ -104,6 +109,10 @@ function chatStream(uName) {
             nickname: data.uniqueId,
             months: data.subMonth,
             timeStamp: currentDate.toLocaleTimeString(),
+            profilePictureUrl: data.profilePictureUrl,
+            followCount: data.followInfo.followerCount,
+            color: msgColor,
+            badges: data.userBadges
           }
           break;
         case 'follow':
@@ -111,6 +120,10 @@ function chatStream(uName) {
             type: 'follow',
             nickname: data.uniqueId,
             timeStamp: currentDate.toLocaleTimeString(),
+            profilePictureUrl: data.profilePictureUrl,
+            followCount: data.followInfo.followerCount,
+            color: msgColor,
+            badges: data.userBadges
           }
           break;
         case 'share':
@@ -118,6 +131,10 @@ function chatStream(uName) {
             type: 'share',
             nickname: data.uniqueId,
             timeStamp: currentDate.toLocaleTimeString(),
+            profilePictureUrl: data.profilePictureUrl,
+            followCount: data.followInfo.followerCount,
+            color: msgColor,
+            badges: data.userBadges
           }
           break;
       }
@@ -146,12 +163,16 @@ function chatStream(uName) {
     tiktokLiveConnection.on('chat', data => {
       let msgColor = getRoleColor([data.isModerator, data.isSubscriber, data.rollowRole]);
       let highlight = isHighlighted(data.comment, data.uniqueId);
+      let currentDate = new Date();
       let out = {
         nickname: data.uniqueId,
         msgContent: data.comment,
         profilePictureUrl: data.profilePictureUrl,
-        color: msgColor,
-        highlightMsg: highlight
+        highlightMsg: highlight,
+        timeStamp: currentDate.toLocaleTimeString(),
+        followCount: data.followInfo.followerCount,
+        badges: data.userBadges,
+        roles: [{role: "mod", value: data.isModerator}, {role: "sub", value: data.isSubscriber}, {role: "default", value: data.rollowRole == 1}]
       }
 
 
