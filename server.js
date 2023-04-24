@@ -30,7 +30,7 @@ const wss = new Server(server, {
     allowedHeaders: ["chat-traffic"],
   }
 });
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 let serverUp = false;
 
