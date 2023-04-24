@@ -164,6 +164,7 @@ function chatStream(uName) {
       let msgColor = getRoleColor([data.isModerator, data.isSubscriber, data.rollowRole]);
       let highlight = isHighlighted(data.comment, data.uniqueId);
       let currentDate = new Date();
+      let createDate = new Date(Number(data.userDetails.createTime));
       let out = {
         nickname: data.uniqueId,
         msgContent: data.comment,
@@ -171,10 +172,10 @@ function chatStream(uName) {
         highlightMsg: highlight,
         timeStamp: currentDate.toLocaleTimeString(),
         followCount: data.followInfo.followerCount,
-        badges: data.userBadges,
-        roles: [{role: "mod", value: data.isModerator}, {role: "sub", value: data.isSubscriber}, {role: "default", value: data.rollowRole == 1}]
+        bio: data.userDetails.bioDescription,
+        roles: [{role: "mod", value: data.isModerator}, {role: "sub", value: data.isSubscriber}, {role: "default", value: data.rollowRole == 1}],
+        createDate: createDate.toDateString
       }
-
 
       wss.emit('chatMessage', JSON.stringify(out));
 
