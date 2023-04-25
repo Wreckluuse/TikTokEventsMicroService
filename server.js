@@ -37,9 +37,8 @@ let serverUp = false;
 wss.on('connection', (socket) => {
 
   socket.on('tryConnection', name => {
-    chatStream(name)
+    tteStream(name)
   })
-
 })
 
 async function isHighlighted(msg, broadcaster) {
@@ -62,7 +61,7 @@ function getRoleColor(roleInfo) {
 
 }
 
-function chatStream(uName) {
+function tteStream(uName) {
   let username = uName || null;
 
   if (username != null || username != '') {
