@@ -21,7 +21,12 @@ app.use(allowCrossDomain);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-var username;
+var nickname = "";
+var dispName = "";
+var handle = "";
+var bio = "";
+var streamerFollowers = 0;
+var streamerFollowing = 0;
 var connected = false;
 const server = http.createServer(app)
 const wss = new Server(server, {
@@ -37,7 +42,16 @@ let serverUp = false;
 wss.on('connection', (socket) => {
 
   socket.on('tryConnection', name => {
-    tteStream(name)
+    tteStream(name, function (cb) {
+      if (cb.code === "success") {
+        dispName = cb.nickname;
+        bio = cb.bio_description;
+        streamerFollowers = cb.follow_info.follower_count;
+        streamerFollowing = cb.follow_info.following_count; 
+        let payload = JSON.stringify(cb);
+        socket.emit('connected', payload);
+      };
+    })
   })
 })
 
@@ -61,7 +75,7 @@ function getRoleColor(roleInfo) {
 
 }
 
-function tteStream(uName) {
+function tteStream(uName, callback) {
   let username = uName || null;
 
   if (username != null || username != '') {
@@ -141,12 +155,16 @@ function tteStream(uName) {
     }
 
     tiktokLiveConnection.connect().then(state => {
+      let callbackValue = {code: "success", state: state.roomInfo.owner};
       console.info(`Connected to room (ID): ${state.roomId}`)
-      wss.emit('connectionSuccessful');
+      callback(callbackValue);
+      ;
       serverUp = true;
+      
     }).catch(err => {
-      console.error('Failed to connect', err)
-      wss.emit('connectionUnsuccessful')
+      let callbackValue = {code: "failed"};
+      console.error(err);
+      callback(callbackValue);
     })
 
     tiktokLiveConnection.on('disconnected', () => {
@@ -204,7 +222,10 @@ function tteStream(uName) {
       let out = {
         type: 'roomUser',
         viewers: data.viewerCount,
-        streamerName: username
+        displayName: dispName,
+        followers: followCount,
+        following: followingCount,
+        bio: bio
       }
       wss.emit('updateInfo', JSON.stringify(out))
     })
